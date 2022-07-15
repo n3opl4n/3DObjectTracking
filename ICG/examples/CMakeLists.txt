@@ -37,3 +37,12 @@ if (USE_AZURE_KINECT)
     add_executable(run_on_camera_sequence run_on_camera_sequence.cpp)
     target_link_libraries(run_on_camera_sequence PUBLIC icg)
 endif ()
+
+if (USE_REALSENSE)
+    # add_executable(record_camera_sequence record_camera_sequence.cpp)
+    # target_link_libraries(record_camera_sequence PUBLIC icg)
+
+    add_executable(run_on_camera_sequence_RS run_on_camera_sequence_RS.cpp)
+    target_link_libraries(run_on_camera_sequence_RS PUBLIC icg)
+endif ()
+
