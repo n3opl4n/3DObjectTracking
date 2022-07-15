@@ -200,3 +200,18 @@ If you find our work useful, please cite us with:
     year      = {2022}
 }
 ```
+
+## Instructions for RealSense and digestive box model
+
+Build after downloading dependencies (all available as packages in Ubuntu 20.04)
+```
+cmake .
+make
+```
+
+Run with RealSense (tested with D435). This will open 2 CV windows
+```
+./examples/run_on_camera_sequence_RS examples/digestive digestive
+```
+
+Move camera or item to match and press T while being in the CV windows
