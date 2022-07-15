@@ -38,7 +38,7 @@ class LoaderCamera : public Camera {
   void set_load_image_type(const std::string &load_image_type);
 
   // Main method
-  bool UpdateImage() override;
+  bool UpdateImage(bool synchronized = true) override;
 
   // Getters
   const std::filesystem::path &load_directory() const;

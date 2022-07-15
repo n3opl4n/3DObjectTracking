@@ -7,8 +7,8 @@ project(SRT3D)
 
 # Options
 # =============================================================================
-option(USE_AZURE_KINECT "Use azure kinect"           ON)
-
+option(USE_AZURE_KINECT "Use Azure Kinect" OFF)
+option(USE_REALSENSE "Use RealSense D435" ON)
 
 # Libraries
 # =============================================================================
@@ -26,6 +26,9 @@ find_package(OpenCV 4.0.0 REQUIRED)
 if(USE_AZURE_KINECT)
     find_package(K4A 1.3.0 REQUIRED)
 endif()
+if (USE_REALSENSE)
+    find_package(realsense2 REQUIRED)
+endif ()
 
 find_package(OpenMP)
 if(OPENMP_FOUND)
@@ -94,6 +97,14 @@ if (WIN32)
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -MTd")
 endif()
 
+# Definitions
+# =============================================================================
+if (USE_AZURE_KINECT)
+    add_definitions( -DUSE_AZURE_KINECT=${USE_AZURE_KINECT} )
+endif ()
+if (USE_REALSENSE)
+    add_definitions( -DUSE_REALSENSE=${USE_REALSENSE} )
+endif ()
 
 # Directories
 # =============================================================================

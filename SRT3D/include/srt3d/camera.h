@@ -31,7 +31,7 @@ class Camera {
   void StopSavingImages();
 
   // Main methods
-  virtual bool UpdateImage() = 0;
+  virtual bool UpdateImage(bool synchronized = true) = 0;
 
   // Getters
   const std::string &name() const;

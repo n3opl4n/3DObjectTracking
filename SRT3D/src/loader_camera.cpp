@@ -69,7 +69,7 @@ void LoaderCamera::set_load_image_type(const std::string &load_image_type) {
   set_up_ = false;
 }
 
-bool LoaderCamera::UpdateImage() {
+bool LoaderCamera::UpdateImage(bool synchronized) {
   if (!set_up_) {
     std::cerr << "Set up camera " << name_ << " first" << std::endl;
     return false;

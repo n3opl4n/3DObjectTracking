@@ -8,12 +8,18 @@ set(SOURCES common.cpp body.cpp renderer_geometry.cpp renderer.cpp
 if(USE_AZURE_KINECT)
     list(APPEND SOURCES azure_kinect_camera.cpp)
 endif()
+if (USE_REALSENSE)
+    list(APPEND SOURCES realsense_camera.cpp)
+endif ()
 
 # Define libraries
 set(LIBRARIES Eigen3::Eigen OpenGL::GL GLEW::GLEW glfw ${OpenCV_LIBRARIES})
 if(USE_AZURE_KINECT)
     list(APPEND LIBRARIES k4a::k4a)
 endif()
+if (USE_REALSENSE)
+    list(APPEND LIBRARIES ${realsense2_LIBRARY})
+endif ()
 if(UNIX)
     list(APPEND LIBRARIES pthread stdc++fs)
 endif()
