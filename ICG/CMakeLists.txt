@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 
 # =============================================================================
-project(ICG)
+project(icg_tracker)
 
 
 # Options
@@ -18,11 +18,18 @@ if (WIN32)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif ()
 
+set(OpenGL_GL_PREFERENCE GLVND)
+
+find_package(ament_cmake REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(camera_utils_msgs REQUIRED)
 find_package(Eigen3 3.3.2 REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(GLEW REQUIRED)
 find_package(glfw3 3.1.2 REQUIRED)
 find_package(OpenCV 4.0.0 REQUIRED)
+find_package(cv_bridge REQUIRED)
 if(USE_AZURE_KINECT)
     find_package(K4A 1.3.0 REQUIRED)
 endif()
@@ -122,10 +129,57 @@ endif ()
 # =============================================================================
 
 # Include Directories
+include_directories(/usr/include/eigen3) 
 include_directories("${CMAKE_SOURCE_DIR}/include")
 include_directories("${CMAKE_SOURCE_DIR}/third_party")
 
 # Sub Directories
 add_subdirectory(src)
-add_subdirectory(examples)
-add_subdirectory(doc)
+# add_subdirectory(examples) #do not build all the examples
+# add_subdirectory(doc) #do not create doc
+
+add_executable(camera
+  examples/run_on_camera_sequence_RS.cpp
+)
+
+ament_target_dependencies(camera
+    ament_cmake
+    rclcpp
+    Eigen3
+    OpenGL
+    GLEW
+    glfw3
+    OpenCV
+    realsense2
+    OpenMP
+)
+
+target_link_libraries(camera icg)
+
+install(TARGETS camera DESTINATION lib/${PROJECT_NAME})
+
+add_executable(camera_topic
+  examples/run_on_camera_topic.cpp
+)
+
+ament_target_dependencies(camera_topic
+    ament_cmake
+    rclcpp
+    sensor_msgs
+    Eigen3
+    OpenGL
+    GLEW
+    glfw3
+    OpenCV
+    realsense2
+    OpenMP
+
+)
+
+target_link_libraries(camera_topic icg)
+
+install(TARGETS camera_topic DESTINATION lib/${PROJECT_NAME})
+
+ament_export_include_directories(include)
+
+ament_package()

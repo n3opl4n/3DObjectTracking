@@ -2,7 +2,7 @@
 // Copyright (c) 2022 Manuel Stoiber, German Aerospace Center (DLR)
 
 #include <filesystem/filesystem.h>
-#include <icg/realsense_camera.h>
+#include <icg/ros_camera.h>
 #include <icg/basic_depth_renderer.h>
 #include <icg/body.h>
 #include <icg/common.h>
@@ -18,7 +18,7 @@
 #include <Eigen/Geometry>
 #include <memory>
 #include <string>
-
+#include <rclcpp/rclcpp.hpp>
 int main(int argc, char *argv[]) {
   if (argc < 3) {
     std::cerr << "Not enough arguments: Provide directory and body_names";
@@ -42,11 +42,27 @@ int main(int argc, char *argv[]) {
   auto renderer_geometry_ptr{
       std::make_shared<icg::RendererGeometry>("renderer geometry")};
 
+  rclcpp::init(argc, argv);
+
+  std::cout << "Creating node...\n";
+//   rclcpp::Node::SharedPtr node = nullptr;
+  auto node = rclcpp::Node::make_shared("run_on_camera_topic");
+//   auto node2 = rclcpp::Node::make_shared("run_on_camera_topic2");
+
+  std::cout << "Setting up cameras...\n";
   // Set up cameras
   auto color_camera_ptr{
-      std::make_shared<icg::RealSenseColorCamera>("azure_kinect_color")}; //ignore the "azure_kinect". It is just for internal use. Need to change it in config.
+      std::make_shared<icg::RosTopicColorCamera>(node, "azure_kinect_color")}; //ignore the "azure_kinect". It is just for internal use. Need to change it in config.
+  
   auto depth_camera_ptr{
-      std::make_shared<icg::RealSenseDepthCamera>("azure_kinect_depth")};
+      std::make_shared<icg::RosTopicDepthCamera>(node, "azure_kinect_depth")};
+  std::cout << "Camera subscribers ready.\n";
+
+  while(!color_camera_ptr->gotInfo() || !depth_camera_ptr->gotInfo()) {
+    rclcpp::spin_some(node);
+    std::cout << "waiting for info... sleeping for 1s\n";
+    rclcpp::sleep_for(std::chrono::seconds(1));
+  }
 
   // Set up viewers
   auto color_viewer_ptr{std::make_shared<icg::NormalColorViewer>(
@@ -59,6 +75,7 @@ int main(int argc, char *argv[]) {
     if (kSaveImages) depth_viewer_ptr->StartSavingImages(save_directory, "bmp");
     tracker_ptr->AddViewer(depth_viewer_ptr);
   }
+  std::cout << "Viewers ready.\n";
 
   // Set up depth renderer
   auto color_depth_renderer_ptr{
@@ -67,6 +84,8 @@ int main(int argc, char *argv[]) {
   auto depth_depth_renderer_ptr{
       std::make_shared<icg::FocusedBasicDepthRenderer>(
           "depth_depth_renderer", renderer_geometry_ptr, depth_camera_ptr)};
+  std::cout << "depth renderer ready.\n";
+
 
   for (const auto body_name : body_names) {
     // Set up body
@@ -75,6 +94,7 @@ int main(int argc, char *argv[]) {
     renderer_geometry_ptr->AddBody(body_ptr);
     color_depth_renderer_ptr->AddReferencedBody(body_ptr);
     depth_depth_renderer_ptr->AddReferencedBody(body_ptr);
+    std::cout << "Body ready.\n";
 
     // Set up detector
     std::filesystem::path detector_path{directory /
@@ -82,6 +102,7 @@ int main(int argc, char *argv[]) {
     auto detector_ptr{std::make_shared<icg::StaticDetector>(
         body_name + "_detector", detector_path, body_ptr)};
     tracker_ptr->AddDetector(detector_ptr);
+    std::cout << "Detector ready.\n";
 
     // Set up models
     auto region_model_ptr{std::make_shared<icg::RegionModel>(
@@ -90,6 +111,7 @@ int main(int argc, char *argv[]) {
     auto depth_model_ptr{std::make_shared<icg::DepthModel>(
         body_name + "_depth_model", body_ptr,
         directory / (body_name + "_depth_model.bin"))};
+    std::cout << "Models ready.\n";
 
     // Set up modalities
     auto region_modality_ptr{std::make_shared<icg::RegionModality>(
@@ -109,6 +131,7 @@ int main(int argc, char *argv[]) {
       region_modality_ptr->ModelOcclusions(color_depth_renderer_ptr);
       depth_modality_ptr->ModelOcclusions(depth_depth_renderer_ptr);
     }
+    std::cout << "Modalities ready.\n";
 
     // Set up optimizer
     auto body1_optimizer_ptr{
@@ -116,10 +139,26 @@ int main(int argc, char *argv[]) {
     body1_optimizer_ptr->AddModality(region_modality_ptr);
     body1_optimizer_ptr->AddModality(depth_modality_ptr);
     tracker_ptr->AddOptimizer(body1_optimizer_ptr);
+    std::cout << "Optimizer ready.\n";
   }
+  std::cout << "Settin up...\n";
 
+//   std::cout << "spinning\n";
+//   rclcpp::spin(node);
+
+//   std::cout << "spin ended\n";
   // Start tracking
-  if (!tracker_ptr->SetUp()) return 0;
-  if (!tracker_ptr->RunTrackerProcess(true, false)) return 0;
+  if (!tracker_ptr->SetUp()) 
+  {
+    std::cout << "Could not SetUp...\n";
+    return 0;
+  }
+  
+  std::cout << "Processing...\n";
+  if (!tracker_ptr->RunTrackerProcessRos(node, true, false)) 
+  {
+    std::cout << "Could not RunTrackerProcess...\n";
+    return 0;
+  }
   return 0;
 }

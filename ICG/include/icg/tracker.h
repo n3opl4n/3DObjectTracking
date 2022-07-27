@@ -21,6 +21,8 @@
 #include <thread>
 #include <vector>
 
+#include <rclcpp/rclcpp.hpp>
+
 namespace icg {
 
 /**
@@ -101,6 +103,9 @@ class Tracker {
   // Main method
   bool RunTrackerProcess(bool execute_detection = false,
                          bool start_tracking = false);
+  bool RunTrackerProcessRos(const std::shared_ptr<rclcpp::Node> &node, 
+                         bool execute_detection = false,
+                         bool start_tracking = false);                       
   void QuitTrackerProcess();
   void ExecuteDetection(bool start_tracking = false);
   void StartTracking();
@@ -197,6 +202,8 @@ class Tracker {
   bool tracking_started_ = false;
   bool quit_tracker_process_ = false;
   bool set_up_ = false;
+
+  std::shared_ptr<rclcpp::Node> rclcpp_node_ptr_ = nullptr;
 };
 
 }  // namespace icg

@@ -218,6 +218,51 @@ bool Tracker::RunTrackerProcess(bool execute_detection, bool start_tracking) {
   return true;
 }
 
+bool Tracker::RunTrackerProcessRos(const std::shared_ptr<rclcpp::Node> &node, bool execute_detection, bool start_tracking) {
+  if (!set_up_) {
+    std::cerr << "Set up tracker " << name_ << " first" << std::endl;
+    return false;
+  }
+
+  // for (int i = 0; i < 10; ++i) {
+  //   rclcpp::spin_some(node);
+  // }
+    
+  tracking_started_ = false;
+  quit_tracker_process_ = false;
+  execute_detection_ = execute_detection;
+  start_tracking_ = start_tracking;
+  for (int iteration = 0;; ++iteration) {
+    rclcpp::spin_some(node);
+    
+    auto begin{std::chrono::high_resolution_clock::now()};
+    if (!UpdateCameras(execute_detection_)) 
+    {
+      continue; //spin until we get both color and depth
+    }
+
+    if (execute_detection_) {
+      if (!ExecuteDetectionCycle(iteration)) return false;
+      tracking_started_ = false;
+      execute_detection_ = false;
+    }
+    if (start_tracking_) {
+      if (!StartModalities(iteration)) return false;
+      tracking_started_ = true;
+      start_tracking_ = false;
+    }
+    if (tracking_started_) {
+      if (!ExecuteTrackingCycle(iteration)) return false;
+    }
+    if (!UpdateViewers(iteration)) return false;
+    if (quit_tracker_process_) return true;
+    // if (!synchronize_cameras_) WaitUntilCycleEnds(begin);
+
+    
+  }
+  return true;
+}
+
 void Tracker::QuitTrackerProcess() { quit_tracker_process_ = true; }
 
 void Tracker::ExecuteDetection(bool start_tracking) {

@@ -1,0 +1,19 @@
+<package format="3">
+  <name>icg_tracker</name>
+  <version>0.0.0</version>
+  <description>The icg_tracker package</description>
+
+  <maintainer email="fao@todo.todo">fao</maintainer>
+
+  <license>TODO</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>sensor_msgs</depend>
+  
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+
+</package>

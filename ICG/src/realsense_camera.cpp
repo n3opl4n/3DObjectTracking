@@ -36,9 +36,9 @@ bool RealSense::SetUp() {
   if (!initial_set_up_) {
     // Configure camera
     if (use_color_camera_)
-      config_.enable_stream(RS2_STREAM_COLOR, 960, 540, RS2_FORMAT_BGR8, 60);
+      config_.enable_stream(RS2_STREAM_COLOR, 1280, 720, RS2_FORMAT_BGR8, 30);
     if (use_depth_camera_)
-      config_.enable_stream(RS2_STREAM_DEPTH, 848, 480, RS2_FORMAT_Z16, 60);
+      config_.enable_stream(RS2_STREAM_DEPTH, 1280, 720, RS2_FORMAT_Z16, 30);
 
     // Start camera
     try {
