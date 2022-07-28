@@ -30,7 +30,8 @@ int main(int argc, char *argv[]) {
     body_names.push_back(std::string{argv[i]});
   }
 
-  constexpr bool kUseDepthViewer = true;
+  constexpr bool kUseColorViewer = true;
+  constexpr bool kUseDepthViewer = false;
   constexpr bool kMeasureOcclusions = true;
   constexpr bool kModelOcclusions = false;
   constexpr bool kVisualizePoseResult = false;
@@ -60,15 +61,17 @@ int main(int argc, char *argv[]) {
 
   while(!color_camera_ptr->gotInfo() || !depth_camera_ptr->gotInfo()) {
     rclcpp::spin_some(node);
-    std::cout << "waiting for info... sleeping for 1s\n";
-    rclcpp::sleep_for(std::chrono::seconds(1));
+    std::cout << "waiting for camera info messages...\n";
+    rclcpp::sleep_for(std::chrono::milliseconds(500));
   }
 
   // Set up viewers
-  auto color_viewer_ptr{std::make_shared<icg::NormalColorViewer>(
-      "color_viewer", color_camera_ptr, renderer_geometry_ptr)};
-  if (kSaveImages) color_viewer_ptr->StartSavingImages(save_directory, "bmp");
-  tracker_ptr->AddViewer(color_viewer_ptr);
+  if (kUseColorViewer) {
+    auto color_viewer_ptr{std::make_shared<icg::NormalColorViewer>(
+        "color_viewer", color_camera_ptr, renderer_geometry_ptr)};
+    if (kSaveImages) color_viewer_ptr->StartSavingImages(save_directory, "bmp");
+    tracker_ptr->AddViewer(color_viewer_ptr);
+  }
   if (kUseDepthViewer) {
     auto depth_viewer_ptr{std::make_shared<icg::NormalDepthViewer>(
         "depth_viewer", depth_camera_ptr, renderer_geometry_ptr, 0.3f, 1.0f)};
@@ -143,11 +146,7 @@ int main(int argc, char *argv[]) {
   }
   std::cout << "Settin up...\n";
 
-//   std::cout << "spinning\n";
-//   rclcpp::spin(node);
-
-//   std::cout << "spin ended\n";
-  // Start tracking
+  tracker_ptr->setRosNode(node);
   if (!tracker_ptr->SetUp()) 
   {
     std::cout << "Could not SetUp...\n";
@@ -155,7 +154,7 @@ int main(int argc, char *argv[]) {
   }
   
   std::cout << "Processing...\n";
-  if (!tracker_ptr->RunTrackerProcessRos(node, true, false)) 
+  if (!tracker_ptr->RunTrackerProcessRos(true, false)) 
   {
     std::cout << "Could not RunTrackerProcess...\n";
     return 0;

@@ -22,6 +22,18 @@
 #include <vector>
 
 #include <rclcpp/rclcpp.hpp>
+#include <geometry_msgs/msg/pose.hpp>
+#include <geometry_msgs/msg/pose_array.hpp>
+// #include <geometry_msgs/msg/point_stamped.hpp>
+// #include <geometry_msgs/msg/transform_stamped.hpp>
+// #include <geometry_msgs/msg/transform.hpp>
+// #include <tf2_ros/static_transform_broadcaster.h>
+// #include <tf2_ros/transform_broadcaster.h>
+// #include <tf2_ros/transform_listener.h>
+// #include <tf2_ros/buffer.h>
+// #include <tf2/LinearMath/Transform.h>
+// #include <Eigen/Dense>
+#include <Eigen/Geometry>
 
 namespace icg {
 
@@ -103,9 +115,10 @@ class Tracker {
   // Main method
   bool RunTrackerProcess(bool execute_detection = false,
                          bool start_tracking = false);
-  bool RunTrackerProcessRos(const std::shared_ptr<rclcpp::Node> &node, 
-                         bool execute_detection = false,
-                         bool start_tracking = false);                       
+  bool RunTrackerProcessRos(bool execute_detection = false,
+                         bool start_tracking = false);   
+  void DetectorCallback(const geometry_msgs::msg::PoseArray::SharedPtr msg);   
+  void PublishTrackedPose();             
   void QuitTrackerProcess();
   void ExecuteDetection(bool start_tracking = false);
   void StartTracking();
@@ -113,11 +126,12 @@ class Tracker {
 
   // Methods for advanced use
   bool ExecuteDetectionCycle(int iteration);
+  bool ExecuteDetectionCycle();
   bool StartModalities(int iteration);
   bool ExecuteTrackingCycle(int iteration);
 
   // Individual steps of detection cycle for advanced use
-  bool DetectBodies();
+  bool DetectBodies(bool using_pose_from_received_message = false);
   bool RefinePoses();
 
   // Individual steps of tracking cycle for advanced use
@@ -162,6 +176,9 @@ class Tracker {
   int viewer_time() const;
   bool set_up() const;
 
+  // ROS
+  void setRosNode(const std::shared_ptr<rclcpp::Node> &node) {rclcpp_node_ptr_ = node;};
+
  private:
   // Helper methods
   bool LoadMetaData();
@@ -203,7 +220,12 @@ class Tracker {
   bool quit_tracker_process_ = false;
   bool set_up_ = false;
 
+  // ROS 
   std::shared_ptr<rclcpp::Node> rclcpp_node_ptr_ = nullptr;
+  rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr detector_subscriber_;
+  rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr tracker_publisher_;
+  Transform3fA detected_pose_;
+  		
 };
 
 }  // namespace icg

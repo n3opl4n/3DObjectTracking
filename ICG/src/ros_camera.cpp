@@ -166,8 +166,8 @@ void RosTopicColorCamera::ImageCallback(const sensor_msgs::msg::Image::SharedPtr
     try
     {
       // topic_image_ptr_ = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
-      topic_image_ptr_ = cv_bridge::toCvCopy(msg);
-      //topic_image_ptr_ = cv_bridge::toCvShared(msg, sensor_msgs::image_encodings::BGR8);
+      // topic_image_ptr_ = cv_bridge::toCvCopy(msg);
+      topic_image_ptr_ = cv_bridge::toCvShare(msg);//, sensor_msgs::image_encodings::BGR8);
      }
      catch (cv_bridge::Exception& e)
       {
@@ -353,8 +353,8 @@ void RosTopicDepthCamera::DepthCallback(const sensor_msgs::msg::Image::SharedPtr
     
     try
     {
-      topic_depth_ptr_ = cv_bridge::toCvCopy(msg);//, sensor_msgs::image_encodings::MONO16);
-      //topic_image_ptr_ = cv_bridge::toCvSharedy(msg, sensor_msgs::image_encodings::);
+      // topic_depth_ptr_ = cv_bridge::toCvCopy(msg);//, sensor_msgs::image_encodings::MONO16);
+      topic_depth_ptr_ = cv_bridge::toCvShare(msg);//, sensor_msgs::image_encodings::);
      }
      catch (cv_bridge::Exception& e)
       {

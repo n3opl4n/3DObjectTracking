@@ -203,15 +203,37 @@ If you find our work useful, please cite us with:
 
 ## Instructions for RealSense and digestive box model
 
-Build after downloading dependencies (all available as packages in Ubuntu 20.04)
+0. Build using colcon. In Release mode you have higher FPS
 ```
-cmake .
-make
+colcon build --packages-select icg_tracker --cmake-args -DCMAKE_BUILD_TYPE=Release
 ```
 
-Run with RealSense (tested with D435). This will open 2 CV windows
+1. Launch tracker (tested with D435). This will open 2 CV windows
 ```
-./examples/run_on_camera_sequence_RS examples/digestive digestive
+ros2 run icg_tracker camera /home/fotis/ROS2/src/3DObjectTracking/ICG/examples/digestive digestive
 ```
 
 Move camera or item to match and press T while being in the CV windows
+
+
+## Instructions using ROS camera topics and digestive box model
+
+0. Build using colcon. In Release mode you have higher FPS
+```
+colcon build --packages-select icg_tracker --cmake-args -DCMAKE_BUILD_TYPE=Release
+```
+
+1. Start camera topics (example using camera_utils private package)
+```
+ros2 launch camera_utils ope_camera.launch.py camera:=D435i
+```
+
+2. Launch OPE object detector
+```
+TODO
+```
+
+3. Launch tracker
+```
+ros2 run icg_tracker camera_tracker /home/fotis/ROS2/src/3DObjectTracking/ICG/examples/digestive digestive
+```

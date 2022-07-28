@@ -39,6 +39,7 @@ class StaticDetector : public Detector {
 
   // Main methods
   bool DetectBody() override;
+  bool DetectBody(const Transform3fA &detected_pose_);
 
   // Getters
   const std::shared_ptr<Body> &body_ptr() const;

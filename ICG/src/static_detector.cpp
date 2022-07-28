@@ -48,6 +48,15 @@ bool StaticDetector::DetectBody() {
   return true;
 }
 
+bool StaticDetector::DetectBody(const Transform3fA &detected_pose_) {
+  if (!set_up_) {
+    std::cerr << "Set up static detector " << name_ << " first" << std::endl;
+    return false;
+  }
+  body_ptr_->set_body2world_pose(detected_pose_);
+  return true;
+}
+
 const std::shared_ptr<Body> &StaticDetector::body_ptr() const {
   return body_ptr_;
 }

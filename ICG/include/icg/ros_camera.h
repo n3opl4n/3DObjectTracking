@@ -146,7 +146,7 @@ class RosTopicColorCamera : public ColorCamera {
   // rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr camera_info_subscriber_;
   rclcpp::Subscription<camera_utils_msgs::msg::SimpleCameraInfo>::SharedPtr camera_info_subscriber_;
   rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr image_subscriber_;
-  cv_bridge::CvImagePtr topic_image_ptr_;
+  cv_bridge::CvImageConstPtr topic_image_ptr_;
 };
 
 /**
@@ -204,7 +204,7 @@ class RosTopicDepthCamera : public DepthCamera {
   std::shared_ptr<rclcpp::Node> rclcpp_node_ptr_ = nullptr;
   rclcpp::Subscription<camera_utils_msgs::msg::SimpleCameraInfo>::SharedPtr camera_info_subscriber_;
   rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr depth_subscriber_;
-  cv_bridge::CvImagePtr topic_depth_ptr_;
+  cv_bridge::CvImageConstPtr topic_depth_ptr_;
 };
 
 }  // namespace icg

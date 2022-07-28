@@ -218,24 +218,24 @@ bool Tracker::RunTrackerProcess(bool execute_detection, bool start_tracking) {
   return true;
 }
 
-bool Tracker::RunTrackerProcessRos(const std::shared_ptr<rclcpp::Node> &node, bool execute_detection, bool start_tracking) {
+bool Tracker::RunTrackerProcessRos(bool execute_detection, bool start_tracking) {
   if (!set_up_) {
     std::cerr << "Set up tracker " << name_ << " first" << std::endl;
     return false;
   }
 
-  // for (int i = 0; i < 10; ++i) {
-  //   rclcpp::spin_some(node);
-  // }
-    
+  detector_subscriber_ = rclcpp_node_ptr_->create_subscription<geometry_msgs::msg::PoseArray>("ope/pose_array", rclcpp::SensorDataQoS(), std::bind(&Tracker::DetectorCallback, this, std::placeholders::_1));		
+  tracker_publisher_ = rclcpp_node_ptr_->create_publisher<geometry_msgs::msg::PoseArray>("ope/pose_array_tracker", 1);		
+
   tracking_started_ = false;
   quit_tracker_process_ = false;
   execute_detection_ = execute_detection;
   start_tracking_ = start_tracking;
   for (int iteration = 0;; ++iteration) {
-    rclcpp::spin_some(node);
-    
     auto begin{std::chrono::high_resolution_clock::now()};
+    
+    rclcpp::spin_some(rclcpp_node_ptr_);
+    
     if (!UpdateCameras(execute_detection_)) 
     {
       continue; //spin until we get both color and depth
@@ -245,6 +245,7 @@ bool Tracker::RunTrackerProcessRos(const std::shared_ptr<rclcpp::Node> &node, bo
       if (!ExecuteDetectionCycle(iteration)) return false;
       tracking_started_ = false;
       execute_detection_ = false;
+      tracking_started_ = true;
     }
     if (start_tracking_) {
       if (!StartModalities(iteration)) return false;
@@ -254,13 +255,65 @@ bool Tracker::RunTrackerProcessRos(const std::shared_ptr<rclcpp::Node> &node, bo
     if (tracking_started_) {
       if (!ExecuteTrackingCycle(iteration)) return false;
     }
+    PublishTrackedPose();
     if (!UpdateViewers(iteration)) return false;
     if (quit_tracker_process_) return true;
     // if (!synchronize_cameras_) WaitUntilCycleEnds(begin);
 
-    
+    auto elapsed_time{std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - begin)};
+    // std::this_thread::sleep_for(elapsed_time - std::chrono::milliseconds{10});
+    std::cout << (int)(1000/elapsed_time.count()) << "\n";
   }
   return true;
+}
+
+// Track just the first pose for now. TODO: Select which one to track or track all of them spawning multiple bodies
+void Tracker::DetectorCallback(const geometry_msgs::msg::PoseArray::SharedPtr msg){
+
+    
+		// targetList.clear();
+
+		// arma::vec::fixed<7> target; 
+
+		// for(int i = 0;i<msg->poses.size();i++){
+      Eigen::Vector3f T;
+      Eigen::Quaternionf q; 
+      T(0) = msg->poses[0].position.x;
+      T(1) = msg->poses[0].position.y;
+      T(2) = msg->poses[0].position.z;
+      q.w() = msg->poses[0].orientation.w;
+      q.x() = msg->poses[0].orientation.x;
+      q.y() = msg->poses[0].orientation.y;
+      q.z() = msg->poses[0].orientation.z;
+
+      detected_pose_.linear() = q.normalized().toRotationMatrix();
+      detected_pose_.translation() = T;	
+		// }
+
+    ExecuteDetectionCycle();	
+}
+
+void Tracker::PublishTrackedPose() {
+  auto message = geometry_msgs::msg::PoseArray();
+  message.header.stamp = rclcpp::Time(); // timestamp of creation of the msg
+  message.header.frame_id = "ope_camera";
+  geometry_msgs::msg::Pose pose; // one pose to put in the array
+
+  for (auto &body_ptrs : body_ptrs_) {
+    Transform3fA tracked_pose = body_ptrs->body2world_pose(); //this is the tracked pose in the camera frame (hopefully...)
+
+    pose.position.x = tracked_pose.translation().x();
+    pose.position.y = tracked_pose.translation().y();
+    pose.position.z = tracked_pose.translation().z();
+    Eigen::Quaternionf Q(tracked_pose.linear());
+    pose.orientation.w = Q.w();
+    pose.orientation.x = Q.x();
+    pose.orientation.y = Q.y();
+    pose.orientation.z = Q.z();
+    message.poses.push_back(pose);
+  }
+  
+  tracker_publisher_->publish(message);
 }
 
 void Tracker::QuitTrackerProcess() { quit_tracker_process_ = true; }
@@ -276,6 +329,11 @@ void Tracker::StopTracking() { tracking_started_ = false; }
 
 bool Tracker::ExecuteDetectionCycle(int iteration) {
   if (!DetectBodies()) return false;
+  return RefinePoses();
+}
+
+bool Tracker::ExecuteDetectionCycle() { //called from callback
+  if (!DetectBodies(true)) return false;
   return RefinePoses();
 }
 
@@ -312,9 +370,15 @@ bool Tracker::ExecuteTrackingCycle(int iteration) {
   return UpdatePublishers(iteration);
 }
 
-bool Tracker::DetectBodies() {
+bool Tracker::DetectBodies(bool using_pose_from_received_message) {
   for (auto &detector_ptr : detector_ptrs_) {
-    if (!detector_ptr->DetectBody()) return false;
+    if (using_pose_from_received_message){
+      if (!detector_ptr->DetectBody(detected_pose_)) return false;
+    }
+    else {
+      if (!detector_ptr->DetectBody()) return false;
+    }
+    
   }
   return true;
 }

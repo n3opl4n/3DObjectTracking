@@ -7,6 +7,7 @@
 #include <icg/body.h>
 #include <icg/camera.h>
 #include <icg/common.h>
+#include <Eigen/Geometry>
 
 namespace icg {
 
@@ -29,6 +30,7 @@ class Detector {
 
   // Main methods
   virtual bool DetectBody() = 0;
+  virtual bool DetectBody(const Transform3fA &detected_pose_) = 0;
 
   // Getters
   const std::string &name() const;

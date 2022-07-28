@@ -9,5 +9,5 @@ geometry2body_pose: !!opencv-matrix
   dt: d
   data: [ 1., 0, 0, 0,
           0, 1., 0, 0,
-          0, 0, 1., -0.006,
+          0, 0, 1., 0,
           0, 0, 0, 1. ]
