@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
   }
 
   constexpr bool kUseColorViewer = true;
-  constexpr bool kUseDepthViewer = false;
+  constexpr bool kUseDepthViewer = true;
   constexpr bool kMeasureOcclusions = true;
   constexpr bool kModelOcclusions = false;
   constexpr bool kVisualizePoseResult = false;

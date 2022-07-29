@@ -235,5 +235,5 @@ TODO
 
 3. Launch tracker
 ```
-ros2 run icg_tracker camera_tracker /home/fotis/ROS2/src/3DObjectTracking/ICG/examples/digestive digestive
+ros2 run icg_tracker camera_topic /home/fotis/ROS2/src/3DObjectTracking/ICG/examples/digestive digestive
 ```
