@@ -21,6 +21,10 @@
 #include <sensor_msgs/image_encodings.hpp>
 #include <cv_bridge/cv_bridge.h>
 #include <camera_utils_msgs/msg/simple_camera_info.hpp> //custom message for camera info
+#include <message_filters/subscriber.h>
+#include <message_filters/time_synchronizer.h>
+#include <message_filters/synchronizer.h>
+#include <message_filters/sync_policies/approximate_time.h>
 using std::placeholders::_1;
 
 namespace icg {
@@ -52,8 +56,12 @@ class RosTopic {
   bool UnregisterID(int id);
   bool SetUp();
 
+  void CameraCallback(const sensor_msgs::msg::Image::SharedPtr color_msg, const sensor_msgs::msg::Image::SharedPtr depth_msg);
+
   // Main methods
   bool UpdateCapture(int id, bool synchronized);
+
+  void PassRosNode(const std::shared_ptr<rclcpp::Node> &node) {rclcpp_node_ptr_ = node;};
 
   // Getters
   bool use_color_camera() const;
@@ -66,6 +74,10 @@ class RosTopic {
   bool received_camera_info_;
   
   float depth_scale_temp_;
+  
+  cv_bridge::CvImageConstPtr topic_image_ptr_, topic_depth_ptr_;
+  bool got_frames_ = false;
+
  private:
   RosTopic() = default;
 
@@ -86,6 +98,16 @@ class RosTopic {
   bool use_color_camera_ = false;
   bool use_depth_camera_ = false;
   bool initial_set_up_ = false;
+
+  std::shared_ptr<rclcpp::Node> rclcpp_node_ptr_ = nullptr;
+  message_filters::Subscriber<sensor_msgs::msg::Image> image_subscriber_;
+  message_filters::Subscriber<sensor_msgs::msg::Image> depth_subscriber_;
+  std::shared_ptr<message_filters::TimeSynchronizer<sensor_msgs::msg::Image, sensor_msgs::msg::Image>> sync_;
+
+  // typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::msg::Image, sensor_msgs::msg::Image> MySyncPolicy;
+  // std::shared_ptr<message_filters::Synchronizer<MySyncPolicy>> sync_;
+  
+  std::chrono::time_point<std::chrono::system_clock> tic;
 
 };
 

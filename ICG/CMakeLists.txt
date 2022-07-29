@@ -23,6 +23,7 @@ set(OpenGL_GL_PREFERENCE GLVND)
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(message_filters REQUIRED)
 find_package(camera_utils_msgs REQUIRED)
 find_package(Eigen3 3.3.2 REQUIRED)
 find_package(OpenGL REQUIRED)
@@ -166,6 +167,7 @@ ament_target_dependencies(camera_topic
     ament_cmake
     rclcpp
     sensor_msgs
+    # message_filters
     Eigen3
     OpenGL
     GLEW

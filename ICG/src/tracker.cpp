@@ -261,8 +261,7 @@ bool Tracker::RunTrackerProcessRos(bool execute_detection, bool start_tracking) 
     // if (!synchronize_cameras_) WaitUntilCycleEnds(begin);
 
     auto elapsed_time{std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - begin)};
-    // std::this_thread::sleep_for(elapsed_time - std::chrono::milliseconds{10});
-    std::cout << (int)(1000/elapsed_time.count()) << "\n";
+    // std::cout << (int)(1000/elapsed_time.count()) << "\n";
   }
   return true;
 }

@@ -34,42 +34,22 @@ bool RosTopic::UnregisterID(int id) {
 bool RosTopic::SetUp() {
   const std::lock_guard<std::mutex> lock{mutex_};
   if (!initial_set_up_) {
-    // Configure camera
-    // if (use_color_camera_)
-    //   config_.enable_stream(RS2_STREAM_COLOR, 960, 540, RS2_FORMAT_BGR8, 30);
-    // if (use_depth_camera_)
-    //   config_.enable_stream(RS2_STREAM_DEPTH, 1280, 720, RS2_FORMAT_Z16, 30);
+    auto qos = rclcpp::SensorDataQoS();
+    image_subscriber_.subscribe(rclcpp_node_ptr_, "/ope_camera/color", qos.get_rmw_qos_profile());
+    depth_subscriber_.subscribe(rclcpp_node_ptr_, "/ope_camera/depth", qos.get_rmw_qos_profile());
+    sync_ = std::make_shared<message_filters::TimeSynchronizer<sensor_msgs::msg::Image, sensor_msgs::msg::Image>>(image_subscriber_, depth_subscriber_, 1);
+    //sync_ = std::make_shared<message_filters::Synchronizer<MySyncPolicy>>(MySyncPolicy(1), image_subscriber_, depth_subscriber_);
+    sync_->registerCallback(&RosTopic::CameraCallback, this);
+    got_frames_ = false;
 
-    // Start camera
-    // try {
-    //   profile_ = pipe_.start(config_);
-    // } catch (std::exception &e) {
-    //   std::cerr << e.what() << std::endl;
-    //   return false;
-    // }
-
-    // Get extrinsics and calculate pose
-    // if (use_color_camera_ && use_depth_camera_) {
-    //   const rs2_extrinsics extrinsics =
-    //       profile_.get_stream(RS2_STREAM_COLOR)
-    //           .get_extrinsics_to(profile_.get_stream(RS2_STREAM_DEPTH));
-    //   Eigen::Matrix3f rot{extrinsics.rotation};
-    //   Eigen::Vector3f trans{extrinsics.translation};
-    //   color2depth_pose_.setIdentity();
-    //   color2depth_pose_.translate(trans);
-    //   color2depth_pose_.rotate(rot);
-    //   depth2color_pose_ = color2depth_pose_.inverse();
-    // }
-
+    color2depth_pose_.setIdentity(); //already done by savvas in Publisher
     // Manual extrinsic calibration
     // Eigen::Matrix3f rot;
     // rot << 0.999836 , -0.0170622, -0.00614453,
     //        0.017079  ,  0.999851 , 0.00269125,
     //        0.00609769, -0.00279575 ,   0.999978;
- 
-    // Eigen::Vector3f trans;
+     // Eigen::Vector3f trans;
     // trans << -0.01466 ,-2.06612e-05 ,-0.000497888;
-    color2depth_pose_.setIdentity(); //already done by savvas in Publisher
     // color2depth_pose_.translate(trans);
     // color2depth_pose_.rotate(rot);
     depth2color_pose_ = color2depth_pose_.inverse();
@@ -80,8 +60,41 @@ bool RosTopic::SetUp() {
     //   pipe_.try_wait_for_frames(&frameset_);
     // }
     initial_set_up_ = true;
+    tic = std::chrono::high_resolution_clock::now();
   }
   return true;
+}
+
+void RosTopic::CameraCallback(const sensor_msgs::msg::Image::SharedPtr color_msg, const sensor_msgs::msg::Image::SharedPtr depth_msg) {
+  auto elapsed_time{std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - tic)};
+  std::cout << (int)(1000/elapsed_time.count()) << "\n";
+
+  try
+  {
+  // topic_image_ptr_ = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
+  // topic_image_ptr_ = cv_bridge::toCvCopy(msg);
+    topic_image_ptr_ = cv_bridge::toCvShare(color_msg);//, sensor_msgs::image_encodings::BGR8);
+  }
+  catch (cv_bridge::Exception& e)
+  {
+    // ROS_ERROR("cv_bridge exception: %s", e.what());
+    std::cout << "cv_bridge exception " << e.what() ;
+    return;
+  }
+
+  try
+  {
+  // topic_depth_ptr_ = cv_bridge::toCvCopy(msg);//, sensor_msgs::image_encodings::MONO16);
+    topic_depth_ptr_ = cv_bridge::toCvShare(depth_msg);//, sensor_msgs::image_encodings::);
+  }
+  catch (cv_bridge::Exception& e)
+  {
+    // ROS_ERROR("cv_bridge exception: %s", e.what());
+    std::cout << "cv_bridge exception " << e.what() ;
+    return;
+  } 
+  tic = std::chrono::high_resolution_clock::now();
+  got_frames_ = true;
 }
 
 bool RosTopic::UpdateCapture(int id, bool synchronized) {
@@ -128,6 +141,8 @@ RosTopicColorCamera::RosTopicColorCamera(const std::shared_ptr<rclcpp::Node> &no
       use_depth_as_world_frame_{use_depth_as_world_frame},
       realsense_{RosTopic::GetInstance()} {
   realsense_.UseColorCamera();
+  realsense_.PassRosNode(node);
+
   // realsense_id_ = realsense_.RegisterID();
 
   rclcpp_node_ptr_ = node;
@@ -156,7 +171,7 @@ void RosTopicColorCamera::startSubscribers()
   
   // Create image subscriber
   camera_info_subscriber_ = rclcpp_node_ptr_->create_subscription<camera_utils_msgs::msg::SimpleCameraInfo>("/ope_camera/info", rclcpp::SensorDataQoS(),  std::bind(&RosTopicColorCamera::CameraInfoCallback, this, _1));
-  image_subscriber_ = rclcpp_node_ptr_->create_subscription<sensor_msgs::msg::Image>("/ope_camera/color", rclcpp::SensorDataQoS(),  std::bind(&RosTopicColorCamera::ImageCallback, this, _1));
+  // image_subscriber_ = rclcpp_node_ptr_->create_subscription<sensor_msgs::msg::Image>("/ope_camera/color", rclcpp::SensorDataQoS(),  std::bind(&RosTopicColorCamera::ImageCallback, this, _1));
 }
 
 void RosTopicColorCamera::ImageCallback(const sensor_msgs::msg::Image::SharedPtr msg) 
@@ -228,13 +243,13 @@ bool RosTopicColorCamera::UpdateImage(bool synchronized) {
     return false;
   }
 
-  if (!got_frame_) {
-    std::cerr << "No color frame received yet" << std::endl;
+  if (!realsense_.got_frames_) {
+    // std::cerr << "No color frame received yet" << std::endl;
     return false;
   }
 
-  image_ = topic_image_ptr_->image; 
-
+  // image_ = realsense_.topic_image_ptr_->image; 
+  cv::Mat{realsense_.topic_image_ptr_->image}.copyTo(image_);
   // Get frameset and copy data to image
   // realsense_.UpdateCapture(realsense_id_, synchronized);
   // cv::Mat{cv::Size{intrinsics_.width, intrinsics_.height}, CV_8UC3,
@@ -323,7 +338,7 @@ void RosTopicDepthCamera::startSubscribers()
 
   // Info subscriber for depth image. In our case, depth is aligned with color so intrinsics are the same and the extrinsic matrix is identity
   camera_info_subscriber_ = rclcpp_node_ptr_->create_subscription<camera_utils_msgs::msg::SimpleCameraInfo>("/ope_camera/info", rclcpp::SensorDataQoS(),  std::bind(&RosTopicDepthCamera::CameraInfoCallback, this, _1));
-  depth_subscriber_ = rclcpp_node_ptr_->create_subscription<sensor_msgs::msg::Image>("/ope_camera/depth", rclcpp::SensorDataQoS(),  std::bind(&RosTopicDepthCamera::DepthCallback, this, _1));
+  // depth_subscriber_ = rclcpp_node_ptr_->create_subscription<sensor_msgs::msg::Image>("/ope_camera/depth", rclcpp::SensorDataQoS(),  std::bind(&RosTopicDepthCamera::DepthCallback, this, _1));
 }  
 
 void RosTopicDepthCamera::CameraInfoCallback(const camera_utils_msgs::msg::SimpleCameraInfo::SharedPtr msg) 
@@ -398,13 +413,14 @@ bool RosTopicDepthCamera::UpdateImage(bool synchronized) {
     return false;
   }
 
-  if (!got_frame_) {
-    std::cerr << "No depth frame received yet" << std::endl;
+  if (!realsense_.got_frames_) {
+    // std::cerr << "No depth frame received yet" << std::endl;
     return false;
   }
 
-  image_ = topic_depth_ptr_->image; 
   // Get frameset and copy data to image
+  // image_ = realsense_.topic_depth_ptr_->image; 
+  cv::Mat{realsense_.topic_depth_ptr_->image}.copyTo(image_);
   // realsense_.UpdateCapture(realsense_id_, synchronized);
   // cv::Mat{cv::Size{intrinsics_.width, intrinsics_.height}, CV_16UC1,
   //         (void *)realsense_.frameset().get_depth_frame().get_data(),
